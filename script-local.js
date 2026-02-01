@@ -1,63 +1,94 @@
 // ============================================
-// CONFIGURATION
+// LOCAL TEST VERSION WITH DIRECT WEBHOOK
 // ============================================
 const CONFIG = {
-    // API Base URL - will be your Vercel deployment URL or localhost for dev
-    API_BASE_URL: window.location.origin,
+    // Discord webhook URL - DIRECTLY EMBEDDED FOR LOCAL TESTING
+    DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/1467387274617553038/lWTIH7RbNUaKeLUY7wtogbOGmjG-rdprEaLxZTkBDQ8VPfNd_0zaPWjSnbi1tHgmKHs3',
     
-    // Code expiration time in milliseconds (5 minutes)
     CODE_EXPIRATION_TIME: 5 * 60 * 1000,
-    
-    // Announcements storage key
     ANNOUNCEMENTS_KEY: 'dashboard_announcements',
 };
 
 // ============================================
-// ACCESS CODE MANAGEMENT
+// ACCESS CODE MANAGEMENT - LOCAL VERSION
 // ============================================
 class AccessCodeManager {
     constructor() {
-        this.sessionId = null;
-        this.sessionCode = null;
+        this.currentCode = null;
         this.codeExpiration = null;
         this.countdownInterval = null;
         this.isCodeUsed = false;
     }
 
+    generateCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    }
+
     async createNewCode() {
+        this.currentCode = this.generateCode();
+        this.codeExpiration = Date.now() + CONFIG.CODE_EXPIRATION_TIME;
+        this.isCodeUsed = false;
+
+        await this.sendCodeToDiscord();
+        this.startCountdown();
+
+        return this.currentCode;
+    }
+
+    async sendCodeToDiscord() {
+        const timestamp = new Date().toLocaleTimeString();
+        const message = {
+            embeds: [{
+                title: '🔐 Dashboard Access Code (LOCAL TEST)',
+                color: 5865242,
+                fields: [
+                    {
+                        name: 'Access Code',
+                        value: `\`${this.currentCode}\``,
+                        inline: true
+                    },
+                    {
+                        name: 'Timestamp',
+                        value: timestamp,
+                        inline: true
+                    }
+                ],
+                description: '⚠️ This code expires in 5 minutes and is single-use only.',
+                footer: {
+                    text: 'Local Test - Secure Dashboard'
+                },
+                timestamp: new Date().toISOString()
+            }]
+        };
+
         try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/generate-code`, {
+            const response = await fetch(CONFIG.DISCORD_WEBHOOK_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                body: JSON.stringify(message)
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate access code');
+                throw new Error('Failed to send code to Discord');
             }
 
-            const data = await response.json();
-            
-            this.sessionId = data.sessionId;
-            this.sessionCode = data.code;
-            this.codeExpiration = data.expiration;
-            this.isCodeUsed = false;
-
-            // Start countdown
-            this.startCountdown();
-
-            console.log('Access code generated and sent to Discord');
+            console.log('✅ Access code sent to Discord successfully');
             return true;
-
         } catch (error) {
-            console.error('Error generating code:', error);
-            throw error;
+            console.error('❌ Error sending code to Discord:', error);
+            alert('⚠️ Unable to send access code to Discord. Please check the webhook URL.');
+            return false;
         }
     }
 
     startCountdown() {
-        // Clear existing interval
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
         }
@@ -82,42 +113,27 @@ class AccessCodeManager {
         this.countdownInterval = setInterval(updateCountdown, 1000);
     }
 
-    async verifyCode(inputCode) {
-        try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/verify-code`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    code: inputCode,
-                    sessionCode: this.sessionCode,
-                    expiration: this.codeExpiration,
-                    isUsed: this.isCodeUsed
-                })
-            });
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                return { success: false, message: data.message || 'Invalid access code.' };
-            }
-
-            // Mark as used
-            this.isCodeUsed = true;
-            clearInterval(this.countdownInterval);
-
-            return { success: true, message: 'Access granted!' };
-
-        } catch (error) {
-            console.error('Error verifying code:', error);
-            return { success: false, message: 'Verification failed. Please try again.' };
+    verifyCode(inputCode) {
+        if (inputCode.toUpperCase() !== this.currentCode) {
+            return { success: false, message: 'Invalid access code.' };
         }
+
+        if (Date.now() > this.codeExpiration) {
+            return { success: false, message: 'Access code has expired.' };
+        }
+
+        if (this.isCodeUsed) {
+            return { success: false, message: 'Access code has already been used.' };
+        }
+
+        this.isCodeUsed = true;
+        clearInterval(this.countdownInterval);
+
+        return { success: true, message: 'Access granted!' };
     }
 
     invalidateCode() {
-        this.sessionId = null;
-        this.sessionCode = null;
+        this.currentCode = null;
         this.codeExpiration = null;
         this.isCodeUsed = false;
         if (this.countdownInterval) {
@@ -127,7 +143,7 @@ class AccessCodeManager {
 }
 
 // ============================================
-// ANNOUNCEMENT MANAGER
+// ANNOUNCEMENT MANAGER - LOCAL VERSION
 // ============================================
 class AnnouncementManager {
     constructor() {
@@ -146,15 +162,15 @@ class AnnouncementManager {
         return [
             {
                 id: 1,
-                title: 'Welcome to the Dashboard',
-                content: 'This is your secure announcement center. All announcements are managed through Discord webhooks with a secure backend.',
+                title: 'Welcome to Local Test Version',
+                content: 'This is your secure announcement center running locally. Discord webhooks are working directly from your browser!',
                 priority: 'info',
                 timestamp: new Date().toISOString()
             },
             {
                 id: 2,
-                title: 'System Status',
-                content: 'All systems are operational. The dashboard is ready for use with Vercel serverless functions.',
+                title: 'Test Announcement',
+                content: 'Try creating a new announcement to see it appear in your Discord channel!',
                 priority: 'update',
                 timestamp: new Date(Date.now() - 3600000).toISOString()
             }
@@ -165,35 +181,7 @@ class AnnouncementManager {
         localStorage.setItem(CONFIG.ANNOUNCEMENTS_KEY, JSON.stringify(this.announcements));
     }
 
-    async addAnnouncementViaAPI(title, content, priority = 'info') {
-        try {
-            const response = await fetch(`${CONFIG.API_BASE_URL}/api/send-announcement`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ title, content, priority })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to send announcement');
-            }
-
-            const data = await response.json();
-            
-            // Add to local storage
-            this.announcements.unshift(data.announcement);
-            this.saveAnnouncements();
-            
-            return data.announcement;
-
-        } catch (error) {
-            console.error('Error sending announcement:', error);
-            throw error;
-        }
-    }
-
-    addAnnouncement(title, content, priority = 'info') {
+    async addAnnouncement(title, content, priority = 'info') {
         const announcement = {
             id: Date.now(),
             title,
@@ -202,9 +190,56 @@ class AnnouncementManager {
             timestamp: new Date().toISOString()
         };
 
+        // Send to Discord
+        await this.sendToDiscord(announcement);
+
+        // Add to local storage
         this.announcements.unshift(announcement);
         this.saveAnnouncements();
+        
         return announcement;
+    }
+
+    async sendToDiscord(announcement) {
+        const priorityConfig = {
+            info: { color: 4437377, emoji: 'ℹ️' },
+            update: { color: 16426522, emoji: '🔔' },
+            alert: { color: 15746887, emoji: '⚠️' }
+        };
+
+        const config = priorityConfig[announcement.priority] || priorityConfig.info;
+
+        const message = {
+            embeds: [{
+                title: `${config.emoji} ${announcement.title}`,
+                description: announcement.content,
+                color: config.color,
+                timestamp: announcement.timestamp,
+                footer: {
+                    text: 'Local Test - Announcement Center'
+                }
+            }]
+        };
+
+        try {
+            const response = await fetch(CONFIG.DISCORD_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(message)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to send announcement');
+            }
+
+            console.log('✅ Announcement sent to Discord');
+            return true;
+        } catch (error) {
+            console.error('❌ Error sending announcement:', error);
+            throw error;
+        }
     }
 
     getAnnouncements() {
@@ -300,7 +335,6 @@ class UIController {
         this.refreshBtn = document.getElementById('refresh-btn');
         this.loadingOverlay = document.getElementById('loading-overlay');
         
-        // Announcement form elements
         this.announcementTitle = document.getElementById('announcement-title');
         this.announcementContent = document.getElementById('announcement-content');
         this.sendAnnouncementBtn = document.getElementById('send-announcement-btn');
@@ -320,22 +354,18 @@ class UIController {
         this.logoutBtn.addEventListener('click', () => this.handleLogout());
         this.refreshBtn.addEventListener('click', () => this.handleRefresh());
 
-        // Convert input to uppercase
         this.accessCodeInput.addEventListener('input', (e) => {
             e.target.value = e.target.value.toUpperCase();
         });
         
-        // Announcement form listeners
         this.sendAnnouncementBtn.addEventListener('click', () => this.handleSendAnnouncement());
         this.clearFormBtn.addEventListener('click', () => this.handleClearForm());
         this.togglePanelBtn.addEventListener('click', () => this.handleTogglePanel());
         
-        // Priority selection
         this.priorityBtns.forEach(btn => {
             btn.addEventListener('click', () => this.handlePrioritySelection(btn));
         });
         
-        // Enter key to send announcement
         this.announcementContent.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
                 this.handleSendAnnouncement();
@@ -344,7 +374,6 @@ class UIController {
     }
 
     async initialize() {
-        // Check if already authenticated (session-based)
         const isAuthenticated = sessionStorage.getItem('dashboard_authenticated');
         
         if (isAuthenticated === 'true') {
@@ -354,15 +383,19 @@ class UIController {
             await this.generateNewAccessCode();
         }
 
-        // Initialize Feather Icons
         feather.replace();
+        console.log('🧪 Local Test Dashboard Initialized');
+        console.log('✅ Webhook URL configured');
     }
 
     async generateNewAccessCode() {
         this.showLoading();
         try {
-            await this.accessManager.createNewCode();
+            const success = await this.accessManager.createNewCode();
             this.errorMessage.textContent = '';
+            if (success) {
+                console.log('✅ Access code generated and sent to Discord!');
+            }
         } catch (error) {
             this.errorMessage.textContent = 'Error generating code. Please refresh the page.';
         } finally {
@@ -370,7 +403,7 @@ class UIController {
         }
     }
 
-    async handleVerification() {
+    handleVerification() {
         const inputCode = this.accessCodeInput.value.trim();
         
         if (!inputCode) {
@@ -378,14 +411,12 @@ class UIController {
             return;
         }
 
-        this.showLoading();
-        const result = await this.accessManager.verifyCode(inputCode);
-        this.hideLoading();
+        const result = this.accessManager.verifyCode(inputCode);
         
         if (result.success) {
             this.errorMessage.textContent = '';
             this.errorMessage.style.color = 'var(--success-color)';
-            this.errorMessage.textContent = 'Access granted!';
+            this.errorMessage.textContent = '✓ Access granted!';
             
             setTimeout(() => {
                 sessionStorage.setItem('dashboard_authenticated', 'true');
@@ -412,8 +443,6 @@ class UIController {
 
     handleRefresh() {
         this.announcementManager.renderAnnouncements();
-        
-        // Show feedback
         const refreshText = this.refreshBtn.querySelector('span');
         refreshText.textContent = 'Refreshed';
         setTimeout(() => {
@@ -422,21 +451,14 @@ class UIController {
     }
 
     handlePrioritySelection(selectedBtn) {
-        // Remove active class from all buttons
         this.priorityBtns.forEach(btn => btn.classList.remove('active'));
-        
-        // Add active class to selected button
         selectedBtn.classList.add('active');
-        
-        // Store selected priority
         this.selectedPriority = selectedBtn.dataset.priority;
     }
 
     handleClearForm() {
         this.announcementTitle.value = '';
         this.announcementContent.value = '';
-        
-        // Reset priority to info
         this.priorityBtns.forEach(btn => btn.classList.remove('active'));
         this.priorityBtns[0].classList.add('active');
         this.selectedPriority = 'info';
@@ -459,48 +481,43 @@ class UIController {
         const title = this.announcementTitle.value.trim();
         const content = this.announcementContent.value.trim();
 
-        // Validation
         if (!title) {
-            alert('Please enter a title for the announcement.');
+            alert('⚠️ Please enter a title for the announcement.');
             this.announcementTitle.focus();
             return;
         }
 
         if (!content) {
-            alert('Please enter content for the announcement.');
+            alert('⚠️ Please enter content for the announcement.');
             this.announcementContent.focus();
             return;
         }
 
-        // Disable button while sending
         this.sendAnnouncementBtn.disabled = true;
         const btnText = this.sendAnnouncementBtn.querySelector('span');
         btnText.textContent = 'Sending...';
         this.showLoading();
 
         try {
-            // Send via backend API
-            await this.announcementManager.addAnnouncementViaAPI(
+            await this.announcementManager.addAnnouncement(
                 title, 
                 content, 
                 this.selectedPriority
             );
 
-            // Refresh the display
             this.announcementManager.renderAnnouncements();
-
-            // Clear the form
             this.handleClearForm();
 
-            // Show success message
-            btnText.textContent = 'Sent!';
+            btnText.textContent = 'Sent! ✓';
             setTimeout(() => {
                 btnText.textContent = 'Send Announcement';
             }, 2000);
 
+            console.log('✅ Announcement sent successfully!');
+
         } catch (error) {
-            console.error('Error sending announcement:', error);
-            alert('Failed to send announcement. Please check your configuration.');
+            console.error('❌ Error sending announcement:', error);
+            alert('❌ Failed to send announcement. Please check the console.');
             btnText.textContent = 'Send Announcement';
         } finally {
             this.sendAnnouncementBtn.disabled = false;
@@ -542,19 +559,17 @@ class UIController {
 // INITIALIZE APPLICATION
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Prevent direct access to dashboard
     if (sessionStorage.getItem('dashboard_authenticated') !== 'true') {
         sessionStorage.removeItem('dashboard_authenticated');
     }
 
-    // Initialize managers
     const accessManager = new AccessCodeManager();
     const announcementManager = new AnnouncementManager();
     const uiController = new UIController(accessManager, announcementManager);
 
-    // Initialize Feather Icons
     feather.replace();
 
-    console.log('Dashboard initialized with backend integration');
-    console.log('API Base URL:', CONFIG.API_BASE_URL);
+    console.log('🚀 Local Test Dashboard Ready!');
+    console.log('📡 Webhook URL: Configured');
+    console.log('✅ Ready to send to Discord!');
 });

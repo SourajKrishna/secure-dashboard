@@ -69,27 +69,20 @@ export default async function handler(req, res) {
             throw new Error('Failed to send code to Discord');
         }
 
-        // Return code info (encrypted/hashed in production)
+        // Return code and session info
+        // Note: In production, use a database like Vercel KV to store codes
         res.status(200).json({
             success: true,
             sessionId: sessionId,
-            codeHash: hashCode(code), // In production, only return hash
+            code: code, // Returning code for demo - in production store in DB
             expiration: expiration
         });
 
     } catch (error) {
         console.error('Error generating code:', error);
-        res.status(500).json({ error: 'Failed to generate access code' });
+        res.status(500).json({ 
+            error: 'Failed to generate access code',
+            details: error.message 
+        });
     }
-}
-
-// Simple hash function (use bcrypt or similar in production)
-function hashCode(code) {
-    let hash = 0;
-    for (let i = 0; i < code.length; i++) {
-        const char = code.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return hash.toString(36);
 }

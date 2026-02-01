@@ -1,5 +1,6 @@
 // Vercel Serverless Function - Verify Access Code
-const activeCodes = new Map(); // In production, use Redis or database
+// Note: This simplified version validates based on session storage
+// For production, use Vercel KV (Redis) or a database
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -16,53 +17,38 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { code, sessionId } = req.body;
+        const { code, sessionCode, expiration, isUsed } = req.body;
 
-        if (!code || !sessionId) {
+        if (!code || !sessionCode) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Missing code or session ID' 
-            });
-        }
-
-        // In production, retrieve from Redis/database
-        const storedData = activeCodes.get(sessionId);
-
-        if (!storedData) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid or expired session' 
-            });
-        }
-
-        // Check expiration
-        if (Date.now() > storedData.expiration) {
-            activeCodes.delete(sessionId);
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Access code has expired' 
+                message: 'Missing required parameters' 
             });
         }
 
         // Check if already used
-        if (storedData.used) {
+        if (isUsed) {
             return res.status(401).json({ 
                 success: false, 
                 message: 'Access code has already been used' 
             });
         }
 
-        // Verify code
-        if (code.toUpperCase() !== storedData.code) {
+        // Check expiration
+        if (Date.now() > expiration) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Access code has expired' 
+            });
+        }
+
+        // Verify code matches
+        if (code.toUpperCase() !== sessionCode.toUpperCase()) {
             return res.status(401).json({ 
                 success: false, 
                 message: 'Invalid access code' 
             });
         }
-
-        // Mark as used
-        storedData.used = true;
-        activeCodes.set(sessionId, storedData);
 
         res.status(200).json({ 
             success: true, 
@@ -73,16 +59,8 @@ export default async function handler(req, res) {
         console.error('Error verifying code:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Verification failed' 
+            message: 'Verification failed',
+            details: error.message
         });
     }
-}
-
-// Store code (called internally by generate-code)
-export function storeCode(sessionId, code, expiration) {
-    activeCodes.set(sessionId, {
-        code: code,
-        expiration: expiration,
-        used: false
-    });
 }

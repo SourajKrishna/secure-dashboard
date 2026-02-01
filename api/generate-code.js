@@ -26,8 +26,18 @@ export default async function handler(req, res) {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_ANON_KEY;
         
+        console.log('Environment check:', {
+            hasUrl: !!supabaseUrl,
+            hasKey: !!supabaseKey,
+            urlStart: supabaseUrl?.substring(0, 20)
+        });
+        
         if (!supabaseUrl || !supabaseKey) {
-            return res.status(500).json({ error: 'Supabase configuration missing' });
+            console.error('Missing Supabase credentials');
+            return res.status(500).json({ 
+                error: 'Supabase configuration missing',
+                details: 'Environment variables not set'
+            });
         }
         
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -45,6 +55,7 @@ export default async function handler(req, res) {
         const expiresAt = new Date(expiration).toISOString();
 
         // Store code in Supabase
+        console.log('Attempting to store code in Supabase...');
         const { data: accessCodeData, error: dbError } = await supabase
             .from('access_codes')
             .insert({
@@ -59,8 +70,14 @@ export default async function handler(req, res) {
 
         if (dbError) {
             console.error('Database error:', dbError);
-            throw new Error('Failed to store access code');
+            return res.status(500).json({ 
+                error: 'Failed to generate access code',
+                details: 'Failed to store access code',
+                dbError: dbError.message 
+            });
         }
+        
+        console.log('Code stored successfully:', accessCodeData?.id);
 
         // Send to Discord
         const timestamp = new Date().toLocaleTimeString();

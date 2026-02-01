@@ -1,5 +1,5 @@
 // Vercel Serverless Function - Generate Access Code with Supabase
-import { getSupabaseClient } from '../lib/supabase.js';
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -23,7 +23,14 @@ export default async function handler(req, res) {
         }
 
         // Initialize Supabase client
-        const supabase = getSupabaseClient();
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseKey) {
+            return res.status(500).json({ error: 'Supabase configuration missing' });
+        }
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // Generate random code
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

@@ -1,0 +1,21 @@
+{
+  "name": "secure-dashboard",
+  "version": "1.0.0",
+  "description": "Secure announcement dashboard with Discord webhook integration",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "dashboard",
+    "discord",
+    "webhook",
+    "announcement"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  }
+}

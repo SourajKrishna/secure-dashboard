@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Dashboard - Announcement Center</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+    <!-- Access Verification Screen -->
+    <div id="verification-screen" class="screen active">
+        <div class="verification-container">
+            <div class="lock-icon">
+                <i data-feather="lock" class="icon-large"></i>
+            </div>
+            <h1>Access Verification Required</h1>
+            <p class="subtitle">Please enter the access code sent to Discord</p>
+            
+            <div class="input-group">
+                <div class="input-wrapper">
+                    <i data-feather="shield" class="input-icon"></i>
+                    <input 
+                        type="text" 
+                        id="access-code-input" 
+                        placeholder="Enter access code"
+                        maxlength="6"
+                        autocomplete="off"
+                    >
+                </div>
+                <button id="verify-btn" class="primary-btn">
+                    <i data-feather="check-circle" class="btn-icon"></i>
+                    <span>Verify Access</span>
+                </button>
+            </div>
+            
+            <div id="error-message" class="error-message"></div>
+            
+            <div class="info-box">
+                <div class="countdown-display">
+                    <i data-feather="clock" class="countdown-icon"></i>
+                    <p>Code expires in <span id="countdown">5:00</span></p>
+                </div>
+                <button id="regenerate-btn" class="secondary-btn">
+                    <i data-feather="refresh-cw" class="btn-icon"></i>
+                    <span>Generate New Code</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard / Announcement Center -->
+    <div id="dashboard-screen" class="screen">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i data-feather="radio" class="header-icon-svg"></i>
+                </div>
+                <div class="header-text">
+                    <h1>Announcement Center</h1>
+                    <p class="header-subtitle">Secure Dashboard</p>
+                </div>
+            </div>
+            <button id="logout-btn" class="logout-btn">
+                <i data-feather="log-out" class="btn-icon"></i>
+                <span>Logout</span>
+            </button>
+        </header>
+
+        <main class="dashboard-main">
+            <!-- Announcement Creation Panel -->
+            <div class="create-announcement-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i data-feather="edit-3" class="panel-icon"></i>
+                        <h2>Create Announcement</h2>
+                    </div>
+                    <button id="toggle-panel-btn" class="toggle-btn">
+                        <i data-feather="minus" class="toggle-icon"></i>
+                    </button>
+                </div>
+                <div class="panel-content" id="announcement-form">
+                    <div class="form-group">
+                        <label for="announcement-title">
+                            <i data-feather="type" class="label-icon"></i>
+                            Title
+                        </label>
+                        <input 
+                            type="text" 
+                            id="announcement-title" 
+                            class="form-input"
+                            placeholder="Enter announcement title"
+                            maxlength="100"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="announcement-content">
+                            <i data-feather="align-left" class="label-icon"></i>
+                            Message
+                        </label>
+                        <textarea 
+                            id="announcement-content" 
+                            class="form-textarea"
+                            placeholder="Enter announcement message"
+                            rows="4"
+                            maxlength="500"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <i data-feather="flag" class="label-icon"></i>
+                            Priority
+                        </label>
+                        <div class="priority-selector">
+                            <button class="priority-btn active" data-priority="info">
+                                <i data-feather="info" class="priority-icon"></i>
+                                <span>Info</span>
+                            </button>
+                            <button class="priority-btn" data-priority="update">
+                                <i data-feather="bell" class="priority-icon"></i>
+                                <span>Update</span>
+                            </button>
+                            <button class="priority-btn" data-priority="alert">
+                                <i data-feather="alert-triangle" class="priority-icon"></i>
+                                <span>Alert</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="send-announcement-btn" class="send-btn">
+                            <i data-feather="send" class="btn-icon"></i>
+                            <span>Send Announcement</span>
+                        </button>
+                        <button id="clear-form-btn" class="clear-btn">
+                            <i data-feather="x-circle" class="btn-icon"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="announcements-container">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i data-feather="inbox" class="section-icon"></i>
+                        <h2>Latest Announcements</h2>
+                    </div>
+                    <button id="refresh-btn" class="refresh-btn">
+                        <i data-feather="rotate-cw" class="btn-icon"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+                
+                <div id="announcements-list" class="announcements-list">
+                    <!-- Announcements will be dynamically loaded here -->
+                    <div class="placeholder">
+                        <div class="placeholder-icon">
+                            <i data-feather="inbox" class="placeholder-icon-svg"></i>
+                        </div>
+                        <p>No announcements available.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="dashboard-footer">
+            <p>&copy; 2026 Secure Dashboard. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Initialize Feather Icons
+        feather.replace();
+    </script>
+</body>
+</html>
+
+    <!-- Access Verification Screen -->
+    <div id="verification-screen" class="screen active">
+        <div class="verification-container">
+            <div class="lock-icon">🔐</div>
+            <h1>Access Verification Required</h1>
+            <p class="subtitle">Please enter the access code sent to Discord</p>
+            
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="access-code-input" 
+                    placeholder="Enter access code"
+                    maxlength="6"
+                    autocomplete="off"
+                >
+                <button id="verify-btn" class="primary-btn">Verify Access</button>
+            </div>
+            
+            <div id="error-message" class="error-message"></div>
+            
+            <div class="info-box">
+                <p>⏱️ Code expires in <span id="countdown">5:00</span></p>
+                <button id="regenerate-btn" class="secondary-btn">Generate New Code</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard / Announcement Center -->
+    <div id="dashboard-screen" class="screen">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>📢 Announcement Center</h1>
+                <p class="header-subtitle">Secure Dashboard</p>
+            </div>
+            <button id="logout-btn" class="logout-btn">Logout</button>
+        </header>
+
+        <main class="dashboard-main">
+            <!-- Announcement Creation Panel -->
+            <div class="create-announcement-panel">
+                <div class="panel-header">
+                    <h2>✍️ Create Announcement</h2>
+                    <button id="toggle-panel-btn" class="toggle-btn">−</button>
+                </div>
+                <div class="panel-content" id="announcement-form">
+                    <div class="form-group">
+                        <label for="announcement-title">Title</label>
+                        <input 
+                            type="text" 
+                            id="announcement-title" 
+                            class="form-input"
+                            placeholder="Enter announcement title"
+                            maxlength="100"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="announcement-content">Message</label>
+                        <textarea 
+                            id="announcement-content" 
+                            class="form-textarea"
+                            placeholder="Enter announcement message"
+                            rows="4"
+                            maxlength="500"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="announcement-priority">Priority</label>
+                        <div class="priority-selector">
+                            <button class="priority-btn active" data-priority="info">
+                                <span class="priority-icon">ℹ️</span>
+                                Info
+                            </button>
+                            <button class="priority-btn" data-priority="update">
+                                <span class="priority-icon">🔔</span>
+                                Update
+                            </button>
+                            <button class="priority-btn" data-priority="alert">
+                                <span class="priority-icon">⚠️</span>
+                                Alert
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button id="send-announcement-btn" class="send-btn">
+                            📢 Send Announcement
+                        </button>
+                        <button id="clear-form-btn" class="clear-btn">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="announcements-container">
+                <div class="section-header">
+                    <h2>Latest Announcements</h2>
+                    <button id="refresh-btn" class="refresh-btn">🔄 Refresh</button>
+                </div>
+                
+                <div id="announcements-list" class="announcements-list">
+                    <!-- Announcements will be dynamically loaded here -->
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📭</div>
+                        <p>No announcements available.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="dashboard-footer">
+            <p>&copy; 2026 Secure Dashboard. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

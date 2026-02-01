@@ -1,18 +1,25 @@
 # 🔐 Secure Dashboard - Announcement Center
 
-A secure, controlled-access dashboard powered by Discord webhooks that functions as an announcement center.
+A secure, controlled-access dashboard powered by Discord webhooks with **Supabase database integration** for persistent data storage.
 
 ## ✨ Features
 
+### 🗄️ Database Persistence (NEW!)
+- **Supabase PostgreSQL** integration for data storage
+- **Access code tracking** with expiration and usage status
+- **Announcement history** stored permanently
+- **Access logs** for security monitoring
+- **Real-time analytics** and reporting capabilities
+
 ### 🔑 Access Verification System
-- **One-time access codes** generated automatically
+- **One-time access codes** generated and stored in database
 - **5-minute expiration** timer with countdown
 - **Discord webhook integration** for code delivery
 - **Session-based authentication** for secure access
-- **Single-use codes** that invalidate after verification
+- **Single-use codes** verified from database
 
 ### 📢 Announcement Center
-- **Read-only announcement display**
+- **Full announcement history** stored in database
 - **Three priority levels**: Info, Update, Alert
 - **Real-time timestamps** with relative time display
 - **Color-coded priority indicators**
@@ -20,11 +27,12 @@ A secure, controlled-access dashboard powered by Discord webhooks that functions
 - **Discord webhook powered** announcements
 
 ### 🛡️ Security Features
-- No code exposure in client-side code
+- Row Level Security (RLS) enabled on all tables
 - Time-based expiration mechanism
-- One-time use verification
-- Session management
-- Direct dashboard access prevention
+- One-time use verification tracked in database
+- IP address logging for security audits
+- Access attempt monitoring
+- Secure environment variable storage
 
 ### 🎨 User Experience
 - Professional Discord-inspired UI
@@ -35,7 +43,70 @@ A secure, controlled-access dashboard powered by Discord webhooks that functions
 
 ## 🚀 Quick Start
 
-### 1. Setup Discord Webhook
+### Deploy in 10 Minutes!
+
+**Option 1: Fast Deployment**
+Open **[QUICK-START.md](QUICK-START.md)** and follow the 4-step guide
+
+**Option 2: Detailed Setup**
+Open **[SUPABASE-SETUP-GUIDE.md](SUPABASE-SETUP-GUIDE.md)** for complete instructions
+
+### What You Need:
+1. Discord webhook URL
+2. Supabase account (free)
+3. Vercel account (free)
+4. GitHub repository
+
+### Environment Variables Required:
+```bash
+DISCORD_WEBHOOK_URL=your-discord-webhook-url
+SUPABASE_URL=your-supabase-project-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+## 📊 Database Schema
+
+Three tables store all your data:
+
+### access_codes
+- Stores generated access codes
+- Tracks expiration and usage
+- Records IP addresses
+
+### announcements
+- Stores all announcements
+- Includes priority and timestamps
+- Tracks Discord delivery
+
+### dashboard_access_logs
+- Logs all access attempts
+- Records success/failure
+- Includes IP and user agent
+
+See **[database/schema.sql](database/schema.sql)** for complete schema
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[QUICK-START.md](QUICK-START.md)** | 10-minute deployment guide |
+| **[SUPABASE-SETUP-GUIDE.md](SUPABASE-SETUP-GUIDE.md)** | Complete step-by-step setup |
+| **[PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md)** | Project summary and overview |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture and data flow |
+| **[SQL-QUERIES.md](SQL-QUERIES.md)** | Database queries for monitoring |
+| **[DEPLOY-CHECKLIST.md](DEPLOY-CHECKLIST.md)** | Deployment checklist |
+| **[ENV-VARIABLES.md](ENV-VARIABLES.md)** | Environment variables reference |
+
+## 🛠️ Tech Stack
+
+- **Frontend**: HTML, CSS, JavaScript
+- **Backend**: Vercel Serverless Functions
+- **Database**: Supabase (PostgreSQL)
+- **Notifications**: Discord Webhooks
+- **Hosting**: Vercel
+- **Version Control**: Git/GitHub
+
+## 1. Setup Discord Webhook
 
 1. Open your Discord server
 2. Right-click on the desired channel
@@ -43,9 +114,15 @@ A secure, controlled-access dashboard powered by Discord webhooks that functions
 4. Click **New Webhook**
 5. Copy the Webhook URL
 
-### 2. Configure the Dashboard
+## 2. Setup Supabase Database
 
-Open `script.js` and update the CONFIG object:
+1. Create account at [supabase.com](https://supabase.com)
+2. Create new project
+3. Go to SQL Editor
+4. Run the contents of [database/schema.sql](database/schema.sql)
+5. Copy your Project URL and anon key from Settings → API
+
+## 3. Deploy to Vercel
 
 ```javascript
 const CONFIG = {

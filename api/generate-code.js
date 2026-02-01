@@ -1,4 +1,6 @@
-// Vercel Serverless Function - Generate Access Code
+// Vercel Serverless Function - Generate Access Code with Supabase
+import { getSupabaseClient } from '../lib/supabase.js';
+
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,6 +22,9 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Webhook URL not configured' });
         }
 
+        // Initialize Supabase client
+        const supabase = getSupabaseClient();
+
         // Generate random code
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let code = '';
@@ -30,6 +35,25 @@ export default async function handler(req, res) {
         // Generate unique session ID
         const sessionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const expiration = Date.now() + (5 * 60 * 1000); // 5 minutes
+        const expiresAt = new Date(expiration).toISOString();
+
+        // Store code in Supabase
+        const { data: accessCodeData, error: dbError } = await supabase
+            .from('access_codes')
+            .insert({
+                code: code,
+                session_id: sessionId,
+                expires_at: expiresAt,
+                is_used: false,
+                ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+            })
+            .select()
+            .single();
+
+        if (dbError) {
+            console.error('Database error:', dbError);
+            throw new Error('Failed to store access code');
+        }
 
         // Send to Discord
         const timestamp = new Date().toLocaleTimeString();
@@ -70,11 +94,10 @@ export default async function handler(req, res) {
         }
 
         // Return code and session info
-        // Note: In production, use a database like Vercel KV to store codes
         res.status(200).json({
             success: true,
             sessionId: sessionId,
-            code: code, // Returning code for demo - in production store in DB
+            code: code,
             expiration: expiration
         });
 

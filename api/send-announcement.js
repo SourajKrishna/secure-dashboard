@@ -1,4 +1,6 @@
-// Vercel Serverless Function - Send Announcement
+// Vercel Serverless Function - Send Announcement with Supabase
+import { getSupabaseClient } from '../lib/supabase.js';
+
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,6 +27,9 @@ export default async function handler(req, res) {
         if (!title || !content) {
             return res.status(400).json({ error: 'Title and content are required' });
         }
+
+        // Initialize Supabase client
+        const supabase = getSupabaseClient();
 
         // Priority colors and emojis
         const priorityConfig = {
@@ -61,11 +66,28 @@ export default async function handler(req, res) {
             throw new Error('Failed to send announcement to Discord');
         }
 
+        // Store announcement in Supabase
+        const { data: announcementData, error: dbError } = await supabase
+            .from('announcements')
+            .insert({
+                title,
+                content,
+                priority,
+                sent_to_discord: true
+            })
+            .select()
+            .single();
+
+        if (dbError) {
+            console.error('Database error:', dbError);
+            // Continue even if database insert fails
+        }
+
         // Return announcement data
         res.status(200).json({
             success: true,
             announcement: {
-                id: Date.now(),
+                id: announcementData?.id || Date.now(),
                 title,
                 content,
                 priority,

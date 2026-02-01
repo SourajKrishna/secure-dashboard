@@ -1,6 +1,5 @@
-// Vercel Serverless Function - Verify Access Code
-// Note: This simplified version validates based on session storage
-// For production, use Vercel KV (Redis) or a database
+// Vercel Serverless Function - Verify Access Code with Supabase
+import { getSupabaseClient } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
     // Enable CORS
@@ -17,17 +16,34 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { code, sessionCode, expiration, isUsed } = req.body;
+        const { code, sessionId } = req.body;
 
-        if (!code || !sessionCode) {
+        if (!code || !sessionId) {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Missing required parameters' 
             });
         }
 
+        // Initialize Supabase client
+        const supabase = getSupabaseClient();
+
+        // Retrieve access code from database
+        const { data: accessCode, error: fetchError } = await supabase
+            .from('access_codes')
+            .select('*')
+            .eq('session_id', sessionId)
+            .single();
+
+        if (fetchError || !accessCode) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid session or code not found' 
+            });
+        }
+
         // Check if already used
-        if (isUsed) {
+        if (accessCode.is_used) {
             return res.status(401).json({ 
                 success: false, 
                 message: 'Access code has already been used' 
@@ -35,7 +51,8 @@ export default async function handler(req, res) {
         }
 
         // Check expiration
-        if (Date.now() > expiration) {
+        const expirationTime = new Date(accessCode.expires_at).getTime();
+        if (Date.now() > expirationTime) {
             return res.status(401).json({ 
                 success: false, 
                 message: 'Access code has expired' 
@@ -43,12 +60,35 @@ export default async function handler(req, res) {
         }
 
         // Verify code matches
-        if (code.toUpperCase() !== sessionCode.toUpperCase()) {
+        if (code.toUpperCase() !== accessCode.code.toUpperCase()) {
             return res.status(401).json({ 
                 success: false, 
                 message: 'Invalid access code' 
             });
         }
+
+        // Mark code as used
+        const { error: updateError } = await supabase
+            .from('access_codes')
+            .update({ 
+                is_used: true, 
+                used_at: new Date().toISOString() 
+            })
+            .eq('session_id', sessionId);
+
+        if (updateError) {
+            console.error('Failed to update code status:', updateError);
+        }
+
+        // Log successful access
+        await supabase
+            .from('dashboard_access_logs')
+            .insert({
+                session_id: sessionId,
+                access_granted: true,
+                ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+                user_agent: req.headers['user-agent']
+            });
 
         res.status(200).json({ 
             success: true, 

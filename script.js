@@ -98,9 +98,7 @@ class AccessCodeManager {
                 },
                 body: JSON.stringify({
                     code: inputCode,
-                    sessionCode: this.sessionCode,
-                    expiration: this.codeExpiration,
-                    isUsed: this.isCodeUsed
+                    sessionId: this.sessionId
                 })
             });
 

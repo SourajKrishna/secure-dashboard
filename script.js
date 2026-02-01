@@ -26,6 +26,8 @@ class AccessCodeManager {
 
     async createNewCode() {
         try {
+            console.log('🔄 Calling API:', `${CONFIG.API_BASE_URL}/api/generate-code`);
+            
             const response = await fetch(`${CONFIG.API_BASE_URL}/api/generate-code`, {
                 method: 'POST',
                 headers: {
@@ -33,11 +35,16 @@ class AccessCodeManager {
                 },
             });
 
+            console.log('📡 Response status:', response.status);
+
             if (!response.ok) {
-                throw new Error('Failed to generate access code');
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ API Error:', errorData);
+                throw new Error(errorData.error || errorData.details || 'Failed to generate access code');
             }
 
             const data = await response.json();
+            console.log('✅ API Response:', { hasCode: !!data.code, hasSession: !!data.sessionId });
             
             this.sessionId = data.sessionId;
             this.sessionCode = data.code;
@@ -47,11 +54,11 @@ class AccessCodeManager {
             // Start countdown
             this.startCountdown();
 
-            console.log('Access code generated and sent to Discord');
+            console.log('✅ Access code generated and sent to Discord');
             return true;
 
         } catch (error) {
-            console.error('Error generating code:', error);
+            console.error('❌ Error generating code:', error);
             throw error;
         }
     }
@@ -363,8 +370,11 @@ class UIController {
         try {
             await this.accessManager.createNewCode();
             this.errorMessage.textContent = '';
+            console.log('✅ Code generated successfully');
         } catch (error) {
-            this.errorMessage.textContent = 'Error generating code. Please refresh the page.';
+            console.error('❌ Error details:', error);
+            this.errorMessage.textContent = `Error: ${error.message}. Check console for details.`;
+            this.errorMessage.style.color = 'var(--error-color)';
         } finally {
             this.hideLoading();
         }
